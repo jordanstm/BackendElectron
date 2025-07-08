@@ -1,0 +1,17 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  h1 {
+    color: #ff0000; /* Cor vermelha */
+  }
+  
+  img {
+    width: 100px;
+    height: auto;
+    margin-bottom: 20px;
+  }
+  
