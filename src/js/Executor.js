@@ -1,23 +1,28 @@
-import { Conexao } from "./Connect.js";
-import path, { dirname } from 'path';
-import fs from 'fs'
-import { fileURLToPath } from 'url';
-//let {Conexao} = require("./Connect") ;
+//import { Conexao } from "./Connect.js"; electron nao comppila type module entao nao da pra usar import so comomjs
+const Conexao = require('./Connect.js')
 
-export async function Executor(SQL){
+const path = require('path');
+const { dirname } = path;
+
+const fs = require('fs')
+
+const fileURLToPath = require('url')
+
+
+ async function Executor(SQL){
     //console.log("A conexao esta assim ",Conexao.Conexao())
     let pool  = await  Conexao()
   return await pool.request().query(SQL)
    // console.log("A conexao esta assim",res);
 }
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename)
+//const __filename = fileURLToPath(import.meta.url);
+//const __dirname = dirname(__filename)
 const GravarLog=async(log)=>{
     path = __dirname + '/log.txt';
-    await fs.writeFileSync(path,log )
+  //  await fs.writeFileSync(path,log )
 
 }
- export const TestaConexao=async()=>{
+ const TestaConexao=async()=>{
     try{
 
    let result=  await   Executor(`Select * from clientes`)
@@ -47,7 +52,7 @@ const MaxCodigo= async(NomeTabela)=>{
     })
   }
 
-export const ListaProdutos= async(Text)=>{
+ const ListaProdutos= async(Text)=>{
    let colunas = 'Codigo,Descricao,PrecoVenda,EAN'
     let resultado='';
     try{
@@ -76,7 +81,7 @@ export const ListaProdutos= async(Text)=>{
     }
  return resultado;
  }
- export async function ValidaUsuario(Usuario){
+  async function ValidaUsuario(Usuario){
     try{
         let SQL=`SELECT * FROM Usuarios WHERE Descricao='${Usuario}'`
         let resultado= await Executor(SQL)
@@ -91,7 +96,7 @@ export const ListaProdutos= async(Text)=>{
     return false; // Usuário não encontrado
 }
 
-export async function ValidaSenha(Senha){
+ async function ValidaSenha(Senha){
     try{
         let SQL=`SELECT * FROM Usuarios WHERE  Senha='${Senha}'`
         let resultado= await Executor(SQL)
@@ -112,7 +117,7 @@ function isNumeric(value) {
    // Verifica se o valor é um número
    return !isNaN(parseFloat(value)) && isFinite(value);
 }
-export async function ListarMesas(params) {
+ async function ListarMesas(params) {
     try {
         let SQL = `SELECT * FROM Quarto`
         if(params) {
@@ -122,15 +127,38 @@ export async function ListarMesas(params) {
             } else {
                 SQL += ` WHERE Descricao LIKE '%${params}%'`;
             }
+            
         }
-        let resultado = await Executor(SQL);
-        return resultado.recordset;
+        SQL+= ` order by Codigo asc`
+        let resultado = await Executor(SQL);    
+        
+        return resultado.recordset
     } catch (error) {
         console.error('Erro ao listar mesas:', error);
         throw new Error('Erro ao listar mesas');
     }
 }
-export const ListarProdutosComEstoque = async (P) => {
+ /* RECUPERA OS DADOS DE MESAS OCUPADAS*/
+const ListaMesasOcupadas=async()=>{
+  try{
+         let SQL = `Select Codigo from QUARTO Where Codigo in
+(Select MESA from Vendas v  INNER JOIN ItensVenda ON V.CODIGO = ItensVenda.Codigo
+ WHERE v.DATA = (SELECT CAST(GETDATE() AS DATE)) and V.Situacao = 'P') `;
+ let ret = await Executor(SQL)
+    if(ret.recordset.length>0){
+      return ret.recordset;
+    }
+    else 
+      return []
+  }
+  catch(err){
+    console.log('erro ro recuperar mesas ocupadas',err)
+  }
+
+}
+
+
+ const ListarProdutosComEstoque = async (P) => {
   let SQL = `select P.Codigo,LTRIM(RTRIM(P.Descricao))Descricao,LTRIM(RTRIM(P.Unidade)) as Unidade,P.PrecoVenda,P.Ean,Ltrim(Rtrim(P.Caracteristicas)) as Caracteristicas ,ROUND((Ce.QtdEntrada-(ce.QtdSaida+Ce.QtdVenda)),2)as Estoque from produtos P inner Join ControleEstoque Ce on Ce.CodProd= P.codigo`;
   
   SQL += ` where  P.Listar=1`
@@ -154,13 +182,13 @@ export const ListarProdutosComEstoque = async (P) => {
        return resultado.recordset;
    }
 }
-export const ListaItensLancados=async (Param)=>{
-  let SQL = `select P.Codigo,P.Descricao,P.Unidade,P.PrecoVenda,MovAtendItens.Qtd,MovAtendItens.Cod from produtos P `;
-  SQL += ` Inner join MovAtendItens on CodIten = P.Codigo inner join MovAtend on MovAtend.Codigo = MovAtendItens.Codigo`
-  SQL += ` where  MovAtend.Status='P' and Cast(MovAtend.DataInicio as date)= (Select cast (GetDate() as date))`
+ const ListaItensLancados=async (Param)=>{
+  let SQL = `select P.Codigo,P.Descricao,P.Unidade,P.PrecoVenda,ItensVenda.Qtd,ItensVenda.Cod from produtos P `;
+  SQL += ` Inner join ItensVenda on CodProd = P.Codigo inner join Vendas on Vendas.Codigo = ItensVenda.Codigo`
+  SQL += ` where  Vendas.Situacao='P' and Cast(vendas.Data as date)= (Select cast (GetDate() as date))`
   if (Param.NroMesa) {
     if(isNaN(Param.NroMesa)==false){
-      SQL += ` and MovAtend.NrMesa=${Param.NroMesa}`  
+      SQL += ` and Vendas.Mesa=${Param.NroMesa}`  
       
     }        
    
@@ -169,8 +197,11 @@ export const ListaItensLancados=async (Param)=>{
    if(resultado.recordset.length > 0){
        return resultado.recordset;
    }
+   else{
+   //  await  AnalisaDataVendaPendente() //verifica existencia de vendas pendentes nos dias anteriores
+   }
 }
-export const ListaItensVenda=async(Param)=>{
+ const ListaItensVenda=async(Param)=>{
   let SQL = `select P.Codigo,P.Descricao,P.Unidade,P.PrecoVenda,I.Qtd,I.Cod from produtos P `;
   SQL += ` Inner join ItensVenda I on I.CodProd = P.Codigo inner join Vendas V on V.Codigo = I.Codigo`
   SQL += ` where  V.Situacao='P' and Cast(V.Data as date)= (Select cast (GetDate() as date))`
@@ -188,7 +219,7 @@ export const ListaItensVenda=async(Param)=>{
    }
 }
 const PegaCodgoDoAtendimentoAtual= async (Atendimento)=>{
-     let SQL = `Select Max(Codigo) as Codigo from MovAtend where Status ='P' and NrMesa=`+Atendimento.NroMesa
+     let SQL = `Select Max(Codigo) as Codigo from Vendas where situacao ='P' and Mesa=`+Atendimento.NroMesa
      return await Executor(SQL)
      .then((dados) => {
       let codigo  = dados.recordset[0].Codigo
@@ -202,19 +233,19 @@ const PegaCodgoDoAtendimentoAtual= async (Atendimento)=>{
 
 }
 const MaxCodigoMovAtend=async()=>{
-  return await Executor('Select Max(Codigo)+1 as Codigo from MovAtend').then((dados) => {
-    let Cod = dados[0]
-     if(dados.length>0){
+let Codigo = await Executor('Select Max(Codigo)+1 as Codigo from vendas').then((dados) => {
+    let Cod = dados.recordset[0]
+     if(Cod?.Codigo){
        Cod = Cod.Codigo
         if(Cod==undefined){
           Cod =1
         }
      }
-     else{
-       Cod=1
-     }
+    
     return Cod;
-  }).catch(e=>{GravarLog(e)})
+  })
+  .catch(e=>{GravarLog(e)})
+  return Codigo;
 }
 function FormatDateSQLServer(date){
   
@@ -224,51 +255,61 @@ function FormatDateSQLServer(date){
   Dia+"/"+date.getFullYear();
   return result;
 }
- export const IniciaAtendimento=async (Atendmento)=>{
+  const IniciaAtendimento=async (Atendmento)=>{
   let Codigo =await MaxCodigoMovAtend();
   let data =new Date();
   let NewDate =FormatDateSQLServer(data);
-  let SQL =`insert Into Movatend(Codigo,Cliente,Vendedor,DataInicio,planoPGTO,Status,TotalBruto,NrMesa)`
+  let SQL =`insert Into Vendas(Codigo,Cliente,Vendedor,Data,plano,Situacao,TotalLiq,Mesa)`
   SQL+=`Values(${Codigo},${1},${Atendmento.Vendedor},'${NewDate}',${1},'P',0,${Atendmento.NroMesa})`
  await Executor(SQL)
  return Codigo
-//   .then((dados) => {
-//     return Codigo;
-//   }).catch((err) => {GravarLog(err)
-//     console.error('Erro no Inicia Atendimento'+err);
-//   })
+
 
 }
-export const AnalisaStatusAtendimento=async(NrMesa)=>{
+ const AnalisaStatusAtendimento=async(NrMesa)=>{
  //Retorno Sera P ou C
-  let SQL= "Select Ltrim(Rtrim(status)) as Estado from MovAtend Where NrMesa = "+NrMesa+ " and status='P'" 
+  let SQL= "Select Ltrim(Rtrim(situacao)) as Estado from Vendas Where Mesa = "+NrMesa+ " and Situacao='P' and data = (SELECT CAST(GETDATE() AS DATE))" 
  return await Executor(SQL)
-  .then((dados) => {
-    if(dados.length==0)
+  .then(async (dados) => {
+  
+    if(dados.recordset.length==0)
     return false;
-    else
-    return true
-  }).catch((err) => { GravarLog(err)
+    else{
+       
+          return true
+    }
+    
+  }).catch((err) => { 
+    GravarLog(err)
     console.error(err);
   })
  
 }
- export const InsereMovAtende=async (Atendimento)=>{
+  const InsereMovAtende=async (Atendimento)=>{
  let Estado = await AnalisaStatusAtendimento(Atendimento.NroMesa)
 
  if(Estado===false){
          return await  IniciaAtendimento(Atendimento)
-    
-
  }
  else{
          return await  PegaCodgoDoAtendimentoAtual(Atendimento)
  }
 
 }
+
+ const AlteraEstadoVendaPendendte=async(CodigoVenda)=>{
+   const SQL= `Update Vendas set situacao ='NC' where Codigo=${CodigoVenda}`
+  let ret= await Executor(SQL)
+  return ret
+ }
+  const ComparaDatas=(dataComparativa)=>{
+    const DataAtual = new Date()
+    const Compara = new Date(dataComparativa)
+     return DataAtual > Compara
+  }
 const verificaSeItemJaExiste=async(Iten)=>{
 
-let SQL = 'Select CodIten from MovAtendItens where Codigo ='+Iten.CodAtend+' and CodIten='+Iten.Codigo
+let SQL = 'Select Codprod from ITENSVENDA where Codigo ='+Iten.CodAtend+' and Codprod='+Iten.Codigo
 let result  = await Executor(SQL)
 .then((dados) => {  
 
@@ -290,16 +331,16 @@ return false;
 }
 
 const AtualizaTotalMovAtend =async (Codigo)=>{
-let SQL=`Select sum(VlTotal) as Total from MovAtendItens where Codigo =${Codigo}`
+let SQL=`Select sum(Total) as Total from Vendas where Codigo =${Codigo}`
 let SQL1 =``
 await Executor(SQL)
 .then((dados) => {
 
     if(undefined!= dados) {
 
-       SQL1=`Update MovAtend Set TotalBruto ='${dados.recordset[0].Total}' where Codigo = ${Codigo}`
+       SQL1=`Update VENDAS Set TotalLiq ='${dados.recordset[0].Total}' where Codigo = ${Codigo}`
       Executor(SQL1)
-       .then(console.log("Atualizou o totalBruto de  MovAtend"))
+       .then(console.log("Atualizou o totalLiquido"))
        .catch(err=>console.log("Deu erro na Atualizacao",err));
 
     }
@@ -311,20 +352,20 @@ await Executor(SQL)
 })
 }
 
-export const InsereItensMovAtend=async(Itens)=>{
+const InsereItensMovAtend=async(Itens)=>{
 let teste =await  verificaSeItemJaExiste(Itens).then(D=>{return D});
 let SQL=``;
 let Tp =``;
 console.log('valor de teste ='+ teste);
  // if(teste== false){
     let TotalB = Math.round(Itens.qtd * Itens.PrecoVenda,2);
-    SQL = `Insert into MovAtendItens(Codigo,CodIten,Desconto,QTD,ValorUN,VlTOTAL)`
-    SQL+=`Values(${Itens.CodAtend},${Itens.Codigo},0,${Itens.qtd},'${Itens.PrecoVenda}','${TotalB}')`
+    SQL = `Insert into ItensVenda(Codigo,Codprod,Desconto,QTD,Valorvenda,TotalBruto,TotalLiquido,Precoliquido)`
+    SQL+=`Values(${Itens.CodAtend},${Itens.Codigo},0,${Itens.qtd},'${Itens.PrecoVenda}','${TotalB}','${TotalB}','${Itens.PrecoVenda}')`
     Tp=`Inserido`
   //}
   //  else {
   //   Tp=`Atualizado`
-  //   SQL = `Update MovAtendItens set qtd = ${Itens.qtd} where CodIten=${Itens.Codigo} and Codigo =${Itens.CodAtend}`
+  //   SQL = `Update MovAtendItens set qtd = ${Itens.qtd} where Codprod=${Itens.Codigo} and Codigo =${Itens.CodAtend}`
   //  }
   
   let ret = await Executor(SQL)
@@ -340,25 +381,25 @@ console.log('valor de teste ='+ teste);
   })
   return ret;
 }
-export const RemoveItemMovAtend = async(Param)=>{
-  let SQL = 'Delete from MovAtendItens where Cod ='+Param.Cod
-  Executor(SQL)
+ const RemoveItemMovAtend = async(Param)=>{
+  let SQL = 'Delete from ItensVenda where Cod ='+Param.Cod
+ return Executor(SQL)
   .then((dados) => {
     console.log('Removido Item');
-    return dados
+    return dados.rowsAffected.length
    
   }).catch((err) => { GravarLog(err)
     console.error('Erro ao remover Item'+err);
   })
 
 }
-export const AlteraQtdMovAtenItem= async (Param)=>{
- let SQL ='update MovAtendItens set qtd ='+Param.Quantidade+' where Cod='+Param.Cod;
+const AlteraQtdMovAtenItem= async (Param)=>{
+ let SQL ='update ItensVenda set qtd ='+Param.Quantidade+' where Cod='+Param.Cod;
 
  Executor(SQL)
  .then((dados) => {
    console.log('Alterada Qtd Item');
-   return dados
+   return dados.rowsAffected
   
  }).catch((err) => { GravarLog(err)
    console.error('Erro ao alterar QTD Item'+err);
@@ -366,7 +407,7 @@ export const AlteraQtdMovAtenItem= async (Param)=>{
 
 
 }
-export const MarcaImpressaoMovAtend =(Param)=>{
+ const MarcaImpressaoMovAtend =(Param)=>{
   let SQL ='update MovAtend set Imprime = 1 where Codigo='+Param.Codigo;
 
   Executor(SQL)
@@ -378,7 +419,7 @@ export const MarcaImpressaoMovAtend =(Param)=>{
    console.error('Erro ao alterar QTD Item'+err);
  })
 }
- export const GravaComprador=(Param)=>{
+const GravaComprador=(Param)=>{
   let SQL ='update Vendas  set Comprador ='+Param.Comprador+' where Codigo='+Param.Codigo;
 
   Executor(SQL)
@@ -391,7 +432,7 @@ export const MarcaImpressaoMovAtend =(Param)=>{
   })
 
  }
- export const AnalisaEstadoVenda=(Codigo)=>{
+  const AnalisaEstadoVenda=(Codigo)=>{
 
      let SQL = `Select Situacao from vendas where Mesa=`+Codigo
 
@@ -410,7 +451,7 @@ export const MarcaImpressaoMovAtend =(Param)=>{
 
 
  }
- export const DeletaItemVenda =async(Param)=>{
+ const DeletaItemVenda =async(Param)=>{
 
    let Codigo =await BuscaCodigoMesaAberto(Param.NroMesa).then(D=>{return D})
    Param.Info.CodigoAtendimento = Codigo;
@@ -437,7 +478,7 @@ export const MarcaImpressaoMovAtend =(Param)=>{
     
 
   }
-   export const GravaInfoDeletçãoItem= async(Param)=>{
+  const GravaInfoDeletçãoItem= async(Param)=>{
      
     let codigo = await MaxCodigo("Eventos").then(d=>{return d})
     
@@ -535,4 +576,29 @@ export const MarcaImpressaoMovAtend =(Param)=>{
   async function CalculaNPCompleto(){
     //calculaValorDefinido();
    return Calcula.Calcula();
+  }
+  module.exports={
+    Executor,
+    GravaInfoDeletçãoItem,
+    DeletaItemVenda,
+    AnalisaEstadoVenda,
+    GravaComprador,
+    MarcaImpressaoMovAtend,
+    GravaInfoDeletçãoItem,
+    AlteraQtdMovAtenItem,
+    RemoveItemMovAtend,
+    InsereItensMovAtend,
+    verificaSeItemJaExiste,
+    InsereMovAtende,
+    IniciaAtendimento,
+    MaxCodigoMovAtend,
+    ListaItensVenda,
+    ListaItensLancados,
+    ListarProdutosComEstoque,
+    ListarMesas,
+    ValidaSenha,
+    ValidaUsuario,
+    TestaConexao,
+    ListaMesasOcupadas
+
   }

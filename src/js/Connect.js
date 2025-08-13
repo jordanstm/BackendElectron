@@ -1,6 +1,17 @@
-import sql  from 'mssql';
-import dotenv from 'dotenv'
-dotenv.config(); // Certifique-se de que o caminho está correto para o arquivo .env
+//import sql  from 'mssql';
+const sql = require('mssql')
+//import dotenv from 'dotenv'
+const path = require('path');
+const dotenv = require('dotenv')
+const { app } = require('electron');
+const isPackaged = app.isPackaged;
+
+const envPath = isPackaged
+  ? path.join(process.resourcesPath, '.env')
+  : path.join( '.env');   
+
+dotenv.config({ path: envPath });
+//dotenv.config(); // Certifique-se de que o caminho está correto para o arquivo .env
 console.log('o valor do env',process.env.DB_NAME);
 const sqlConfig = {
   user:'sa', //process.env.DB_USER,
@@ -8,9 +19,9 @@ const sqlConfig = {
   database: process.env.DB_NAME,
   server: 'localhost',//process.env.SERVER_NAME,
   pool: {
-    max: 10,
+    max: 1000,
     min: 0,
-    idleTimeoutMillis: 30000
+    idleTimeoutMillis: 130000
   },
   options: {
     encrypt: false, // para Azure
@@ -18,7 +29,7 @@ const sqlConfig = {
   }
 };
 
- export async function Conexao( ) {
+  async function Conexao( ) {
   try {
     // Certifique-se de que todos os itens estão corretamente codificados na URL da string de conexão
     let con= await sql.connect(sqlConfig);
@@ -31,4 +42,4 @@ const sqlConfig = {
     console.error("Deu lhe um erro ",err);
   }
 }
-export  {sql};
+module.exports=  Conexao;

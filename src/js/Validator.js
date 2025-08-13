@@ -1,4 +1,16 @@
-import { ListaProdutos,ListarMesas,ValidaSenha,ValidaUsuario,ListarProdutosComEstoque, IniciaAtendimento, InsereItensMovAtend, InsereMovAtende } from "./Executor.js";
+let { ListaProdutos,
+    ListarMesas,
+    ValidaSenha,
+    ValidaUsuario,
+    ListarProdutosComEstoque,
+    IniciaAtendimento,
+    InsereItensMovAtend,
+    InsereMovAtende,
+    ListaItensLancados,
+    RemoveItemMovAtend,
+    AlteraQtdMovAtenItem,
+    ListaMesasOcupadas
+} = require("./Executor.js");
 const ConsultaProdutos = async (Text) => {
     const response = await ListaProdutos(Text);
     return JSON.stringify(response);
@@ -78,6 +90,26 @@ const InsereItens=(params)=>{
     let ret = InsereItensMovAtend(params);
     return ret
 }
+const ListaItens =async(params)=>{
+  let ret =await  ListaItensLancados(params)
+  if(ret!= undefined)
+   return JSON.stringify(ret)
+else{
+     return 0
+}
+}
+const RemoveItem =async(params)=>{
+    let ret =await RemoveItemMovAtend(params)
+    return JSON.stringify(ret)
+}
+const AlteraQTD = async(params)=>{
+    let ret =await  AlteraQtdMovAtenItem(params);
+    return JSON.stringify(ret)
+}
+const listaMesasOcupadas = async(params)=>{
+   let mesas= await ListaMesasOcupadas(params);
+   return JSON.stringify(mesas);
+}
 const Addresser =async(params) => {
  console.log('params:', params);
     switch (params.route) {
@@ -108,9 +140,21 @@ const Addresser =async(params) => {
         case '/InsereIten':
             let I = await InsereItens(params.Message);
             return JSON.stringify({data:I});
+            case'/ListaItensLancados':
+            let J = await ListaItens(params.Message)
+             return J;
+             case'/RemoveItem':
+             let K = RemoveItem(params.Message)
+             return K;
+             case '/AlteraQTDMov':
+                let L= AlteraQTD(params.Message)
+                  return L;
+                  case '/ListaMesasOcupadas':
+                    let M = await listaMesasOcupadas(params.Message)
+                    return M;
         default:
             return 'Unknown validation type';
     }
 };
 
-export default Addresser;
+module.exports= Addresser ;
