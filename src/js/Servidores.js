@@ -53,6 +53,27 @@ async function IniciaServidores({ mainWindow, ipcMain, app }) {
       res.send('QR Code ainda não disponível');
     }
   });
+  expressApp.post('/enviar-pdf', async (req, res) => {
+    const { numero, caminhoPdf, nomeArquivo } = req.body;
+    try {
+      await venomService.enviarPdf(numero, caminhoPdf, nomeArquivo);
+      res.send('PDF enviado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar PDF:', error);
+      res.status(500).send('Erro ao enviar PDF');
+    }
+  });
+ 
+   expressApp.post('/enviarPedido', async (req, res) => {
+    const { numero, caminhoPdf, nomeArquivo } = req.body;
+    try {
+      await venomService.enviarPdf(numero, caminhoPdf, nomeArquivo);
+      res.send('PDF enviado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar PDF:', error);
+      res.status(500).send('Erro ao enviar PDF');
+    }
+  });
 
   io.on('connection', (socket) => {
     console.log(`Novo cliente conectado: ${socket.id}`);

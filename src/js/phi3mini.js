@@ -1,5 +1,5 @@
 const axios = require('axios');
-
+const ConsultaProdutos = require('ConexaoFirebird')
 async function Addresser({ Message, route }) {
   try {
     const response = await axios.post('http://177.130.59.229:8080/api/generate', {

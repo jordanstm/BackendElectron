@@ -1,6 +1,6 @@
 // venomService.js
 const venom = require('venom-bot');
-
+const path = require('path');
 let qrCodeBase64 = null;
 let clientInstance = null;
 
@@ -40,8 +40,19 @@ function start(client) {
 function getQrCode() {
   return qrCodeBase64;
 }
+async function enviarPdf(numero, caminhoPdf, nomeArquivo = 'documento.pdf') {
+  if (!clientInstance) throw new Error('Cliente Venom não está pronto');
+  const numeroFormatado = `${numero}@c.us`;
 
+  await clientInstance.sendFile(
+    numeroFormatado,
+    path.resolve(caminhoPdf),
+    nomeArquivo,
+    'Olá! Segue o PDF solicitado 📄'
+  );
+}
 module.exports = {
   initVenom,
-  getQrCode
+  getQrCode,
+  enviarPdf
 };
