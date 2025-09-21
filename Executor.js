@@ -25,11 +25,13 @@ const GravarLog=async(log)=>{
  const TestaConexao=async()=>{
     try{
 
-   let result=  await   Executor(`Select * from clientes`)
+   let result=  await   Executor(`Select * from clientForn`)
         console.log('Conexao realizada com sucesso!');
         console.log('O Resultado com sucesso',result.recordset);
+        return result;
     }catch(err){
         console.error(`Erro ao conectar ao banco de dados: ${err}`);
+        return "Erro no teste de conexao"+ err
     }
 }
 const MaxCodigo= async(NomeTabela)=>{
@@ -577,6 +579,16 @@ const GravaComprador=(Param)=>{
     //calculaValorDefinido();
    return Calcula.Calcula();
   }
+   async function ConsultaSimplesProduto(descricao){
+   let sql = ``
+    if( descricao){
+      sql +=`Select Codigo,Descricao,Precovenda from Produtos where Descricao like '%${descricao}%'`   
+    }
+    
+   
+    let ret =await  Executor(sql)
+    return ret.recordset;
+   }
   module.exports={
     Executor,
     GravaInfoDeletçãoItem,
@@ -599,6 +611,7 @@ const GravaComprador=(Param)=>{
     ValidaSenha,
     ValidaUsuario,
     TestaConexao,
-    ListaMesasOcupadas
+    ListaMesasOcupadas,
+    ConsultaSimplesProduto
 
   }

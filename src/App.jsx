@@ -1,6 +1,4 @@
-
-
-import React, { useDebugValue, useEffect, useState } from 'react';
+import React, { useEffect, useState,useRef } from 'react';
 import {
   Container,
   Typography,
@@ -8,55 +6,65 @@ import {
   Box,
   Paper,
   IconButton,
-  Tooltip
+  Tooltip,
+  Button,
 } from '@mui/material';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
 import logo from './images/logofull.png';
+import BotConfigurator from './Config';
 
 
 function App({ darkMode, toggleTheme }) {
   const [qrCode, setQrCode] = useState(null);
-    const [clientes, setClientes] = useState([]);
-  useEffect(() => {
+  const [clientes, setClientes] = useState([]);
+  const [view, setView] = useState("inicio"); // 👈 controle da tela atual
+  const intervalRef = useRef(null);
+
+useEffect(() => {
   const fetchQr = async () => {
-    const res = await fetch('http://localhost:8099/qr');
-    const text = await res.text();
-    const match = text.match(/<img src="([^"]+)"/);
-    if (match) {
-      setQrCode(match[1]);
-    } else {
-      setQrCode(1);
+    try {
+      const res = await fetch('http://localhost:8099/qr');
+      const text = await res.text();
+
+      if (text === "NOT_READY") {
+        setQrCode(null);
+        return;
+      }
+
+      const json = JSON.parse(text);
+
+      if (json.status === 'connected') {
+        setQrCode(1);
+      } else {
+        setQrCode(json.QrCode);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar QR:', err.message);
     }
   };
 
-  fetchQr();
+  fetchQr(); // busca inicial
 
-  const handleClienteConectado = ( message) => {
-    console.log("Cliente conectado:", message);
-    setClientes((prev) => [...prev, message]);
-  };
-
-  if (window.electron && window.electron.ipcRenderer) {
-    console.log("IPC Renderer  disponível");
-    window.electron.ipcRenderer.on('cliente-conectado', handleClienteConectado);
-  } else {
-    console.log("IPC Renderer não está disponível");
-  }
-
-  const interval = setInterval(fetchQr, 5000);
+  intervalRef.current = setInterval(fetchQr, 5000); // inicia polling
 
   return () => {
-    clearInterval(interval);
-    if (window.electron && window.electron.ipcRenderer) {
-      window.electron.ipcRenderer.removeListener('cliente-conectado', handleClienteConectado);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
   };
-}, []);
+}, []); // 👈 executa só uma vez
 
+useEffect(() => {
+  if (qrCode === 1 && intervalRef.current) {
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  }
+}, [qrCode]); // 👈 observa mudanças no qrCode
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 5 }}>
-      <Paper elevation={4} sx={{ p: 4, textAlign: 'center', position: 'relative' }}>
+    <Container maxWidth="md" sx={{ mt: 5 }}>
+      <Paper elevation={4} sx={{ p: 2, position: 'relative' }}>
         {/* Botão de alternância de tema */}
         <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
           <Tooltip title="Alternar tema">
@@ -67,31 +75,51 @@ function App({ darkMode, toggleTheme }) {
         </Box>
 
         {/* Logo */}
-        <Box mb={2}>
+        <Box textAlign="center" mb={2}>
           <img src={logo} alt="Logo Ultrasoft" style={{ width: 120 }} />
         </Box>
 
-        {/* Título e instruções */}
-        <Typography variant="h5" gutterBottom>
-          Conecte-se ao WhatsApp
-        </Typography>
-        { qrCode === null &&  <Typography variant="body1" gutterBottom>
-          Escaneie o QR Code abaixo com seu aplicativo WhatsApp.
-        </Typography>
-        }
-       
+        {/* Botões de navegação */}
+        <Box textAlign="center" mb={3} >
+          <Button
+            variant={view === "inicio" ? "contained" : "outlined"}
+            onClick={() => setView("inicio")}
+            sx={{ mr: 2 }}
+          >
+            Início
+          </Button>
+          <Button
+            variant={view === "botIA" ? "contained" : "outlined"}
+            onClick={() => setView("botIA")}
+          >
+            BotIA
+          </Button>
+        </Box>
 
-        {/* QR Code ou loading */}
-      <Box mt={3}>
-  {qrCode === null && <CircularProgress />}
-  {qrCode === 1 && <Typography variant="body1">Aparelho conectado no WhatsApp</Typography>}
-  {qrCode && qrCode !== 1 && (
-    <img src={qrCode} alt="QR Code" style={{ width: 300 }} />
-  )}
-</Box>
-        <Box>
-          {
-            clientes.length>0 && (
+        {/* Conteúdo da tela Início */}
+        {view === "inicio" && (
+          <Box textAlign="center">
+            <Typography variant="h5" gutterBottom>
+              Conecte-se ao WhatsApp
+            </Typography>
+            {qrCode === null && (
+              <Typography variant="body1" gutterBottom>
+                Escaneie o QR Code abaixo com seu aplicativo WhatsApp.
+              </Typography>
+            )}
+            <Box mt={3}>
+              {qrCode === null && <CircularProgress />}
+              {qrCode === 1 && <Typography variant="body1">Aparelho conectado no WhatsApp</Typography>}
+              {qrCode && qrCode !== 1 && (
+                <img src={qrCode} alt="QR Code" style={{
+                  width: 300,
+                  filter: 'contrast(200%) brightness(120%)',
+                  borderRadius: 8,
+                  boxShadow: '0 0 10px rgba(0,0,0,0.2)'
+                }} />
+              )}
+            </Box>
+            {clientes.length > 0 && (
               <Box mt={2}>
                 <Typography variant="h6">Clientes Conectados:</Typography>
                 <ul>
@@ -100,9 +128,22 @@ function App({ darkMode, toggleTheme }) {
                   ))}
                 </ul>
               </Box>
-            )
-          }
-        </Box>
+            )}
+          </Box>
+        )}
+
+        {/* Conteúdo da tela BotIA */}
+        {view === "botIA" && (
+          <Box>
+            <Typography variant="h5" gutterBottom>
+              Configuração do BotIA
+            </Typography>
+            <Typography variant="body1">
+              Aqui você poderá configurar o RAG, definir fontes, parâmetros e comportamento do bot.
+            </Typography>
+            <BotConfigurator />
+          </Box>
+        )}
       </Paper>
     </Container>
   );

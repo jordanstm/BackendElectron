@@ -4,12 +4,14 @@
   "type": "commonjs",
   "description": "A simple Electron app for managing SQL connections",
   "main": "main.js",
+  "icon": "icone.ico",
   "scripts": {
     "start": "electron-forge start",
     "test": "echo \"Error: no test specified\" && exit 1",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "build": "webpack"
+    "build": "webpack",
+    "dist": "electron-builder --windows nsis:ia32"
   },
   "author": "Erick Jordan",
   "license": "ISC",
@@ -26,7 +28,8 @@
     "@electron-forge/plugin-fuses": "^7.8.1",
     "@electron/fuses": "^1.8.0",
     "babel-loader": "^10.0.0",
-    "electron": "^34.0.0",
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12",
     "webpack": "^5.101.0",
     "webpack-cli": "^6.0.1"
   },
@@ -38,17 +41,34 @@
     "axios": "^1.11.0",
     "dotenv": "^16.4.7",
     "electron-forge-maker-nsis": "^26.0.12",
+    "electron-is-dev": "^3.0.1",
+    "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
     "express": "^4.21.2",
+    "fs-extra": "^11.3.1",
     "mssql": "^11.0.1",
     "node-firebird": "^1.1.9",
-    "nodemon": "^3.1.10",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "socket.io": "^4.8.1",
-    "venom-bot": "^5.3.0"
+    "string-similarity": "^4.0.4",
+    "watsappultra": "file:../../WatsappUltra"
   },
   "config": {
     "forge": "./forge.config.cjs"
+  },
+  "build": {
+    "appId": "com.backend.ultra",
+    "productName": "BackendUltrasoft",
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": false,
+      "installerIcon": "icone.ico",
+      "uninstallerIcon": "icone.ico",
+      "deleteAppDataOnUninstall": true,
+      "warningsAsErrors": false
+    }
   }
 }

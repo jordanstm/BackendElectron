@@ -1,7 +1,8 @@
 {
+  
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
+    "target": "ES2020",
+    "module": "CommonJS",
     "jsx": "react",
     "moduleResolution": "node",
     "allowJs": true,
@@ -10,5 +11,7 @@
     "baseUrl": "./src",
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src"]
+
+
+  "include": ["src", "src/js/Executor.js", "Connect.js", "Servidores.js", "Validator.js", "phi3mini.js", "isGreeting.js", "PerfisAtendimento.js", "extratorProduto.js", "filtroProduto.js", "FunctionHandlers.js", "FunctionsDefinitions.js", "preload.js", "renderer.js", "wapp.js", "ConexaoFirebird.js"]
 }
